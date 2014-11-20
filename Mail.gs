@@ -1,3 +1,4 @@
+// email the rota to the designated recipient(s)
 function sendRota() {
   init(false);
   var buf = "";
@@ -17,6 +18,7 @@ function sendRota() {
   );
 }
 
+//publish the rota to a google sites page
 function publishRota() {
   init(false);
   var buf = "<h4>This page is re-created daily from the rota spreadsheet.</h4>";
