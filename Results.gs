@@ -1,3 +1,4 @@
+//Format a table for a given date
 function getDateTable(d, daterec) {
   var service = daterec.service;
   
@@ -32,7 +33,11 @@ function getDateTable(d, daterec) {
  
 }
 
+
 /*
+
+//When scriptdb was in use, this code would present a table of participants for a given role. 
+//Some refactoring would be needed to reactivate this code
 function getRoleTable(prole, result) {
   var service = [];
  
@@ -60,6 +65,8 @@ function getRoleTable(prole, result) {
  
 }
 
+//When scriptdb was in use, this code would present a table roles for a given participant. 
+//Some refactoring would be needed to reactivate this code
 function getPersonTable(person) {
   var srvs = people.ipeople[person].roles;
   var sarr = Object.keys(srvs).sort();
