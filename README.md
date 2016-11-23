@@ -15,3 +15,15 @@ Try it yourself
 - Create a trigger to call "sendRota" on a daily basis
 
 ## Screen Shots
+
+![image](screenshots/sheet1.jpg)
+
+![image](screenshots/sheet2.jpg)
+
+![image](screenshots/sheet3.jpg)
+
+![image](screenshots/email.jpg)
+
+![image](screenshots/sheet4.jpg)
+
+![image](screenshots/sites.jpg)
