@@ -41,18 +41,8 @@ function isSkip(s) {
 }
 
 //get array of defined dates
-function getRotaDates() {
-  return Object.keys(dates.idates).sort().join(",");
-}
-
-//get array of defined people
-function getRotaPeople() {
-  return Object.keys(people.ipeople).sort().join(",");
-}
-
-//get array of defined roles
-function getRotaRoles() {
-  return Object.keys(roles.iroles).sort().join(",");
+function getRotaDates(DATA) {
+  return Object.keys(DATA.dates.idates).sort().join(",");
 }
 
 //get a date/time as a string
@@ -88,13 +78,13 @@ function testFutureDate(v) {
 }    
 
 //get the next defined date in the set of dates
-function getFirstDate() {
-  return getFirstDates(1);
+function getFirstDate(DATA) {
+  return getFirstDates(DATA, 1);
 }
 
 //get the first n dates in a set of dates
-function getFirstDates(n) {
-  var dates = getRotaDates();
+function getFirstDates(DATA, n) {
+  var dates = getRotaDates(DATA);
   if (dates == null) return "";
   var arr = dates.split(",");
   if (arr.length > n) arr.length = n;
