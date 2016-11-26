@@ -10,8 +10,12 @@ This will create a rota e-mail reminder and publish to Google Sites as a webpage
 
 Try it yourself
 - Select "Make a Copy" to save an editable copy
-- Set up google sites if applicable
-- TBD: Make Google Sites more Accessible
+- Set up google site to which you have write permission
+  - Create a google site page for publishing the rota
+- Set Google Sites Script Properties to control how the rota will be published
+  - emailid  The email recipient to use for sending out the published rota.  If not set, the spreadsheet owner will be used.
+  - siteid   The URL to the Google Site to which the rota will be published.  If not set, the first Google site owned by the user will be used.
+  - pageId   The page name (within the google site) to which the rota will be published.  If not set, "rotasearch" will be used.
 - Create a trigger to call "sendRota" on a daily basis
 
 ## Screen Shots
