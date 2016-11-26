@@ -2,89 +2,95 @@
  * Rota Generation Code.
  * This code can be embedded in a Google Site, in a Google Spreadsheet, or as a Google App Web Service.  Initilization will depend on how the item is stored
  *
- * [     ] [date]    [date] Dates in ascending order
+ * PRE-REQUISITES
+ * ================================================================
+ * 1. A Spreadsheet with the Following Layout
+ * ----------------------------------------------------------------
+ * [     ] [date]    [date] Dates in ascending order.  Dates in the past will be skipped
  * [     ] [service/string] [service/string] 
  * [role]  [participant]  [participant]
  *         [participant]  [participant]  Role repeats if blank
  * Declare global variables
  * The initial solution stored these objects in ScriptDB which influenced the object structure
+ *
+ * 2. A Google Site with a Writable Web Page To Contain the Published Rota
+ * ----------------------------------------------------------------
+ *
+ * 3. Google Apps Script Properties (embedded in the script)
+ * ----------------------------------------------------------------
+ * rotaid   The google apps object id of the spreadsheet to process.  If the script is embedded in a Google Sheet, that spreadsheet will be used.
+ * emailid  The email recipient to use for sending out the published rota.  If not set, the spreadsheet owner will be used.
+ * rotamod  Contains the last date that the rota was published to the website.  Updates will not be published if no recent changes exist.
+ * siteid   The URL to the Google Site to which the rota will be published.  If not set, the first Google site owned by the user will be used.
+ * pageId   The page name (within the google site) to which the rota will be published.  If not set, "rotasearch" will be used.
  */
 
-// all service dates (from column headers, allowing for multiple services in one date)
-var dates;
-// all roles, row headers
-var roles;
-// row data extracted from spreadhseet
-var rows;
-// all people, from table cells
-var people;
-//obsolete, used in former ui solution
-var app;
-//boolean, indicates that the rota spreadsheet has been updated since some triggering event (not currently in use)
-//TODO: compare spreadsheet edit date against the last page update date (or cached last update date)
-var rotamod;
+//properties
+var prop = PropertiesService.getScriptProperties();
+
 
 /*
  * Variables that need to be modified for each run
  */
 // Email recipient for rota messages.  Ideally this is a group email for all rota participants.
 //var emailid = "yourtest____test@gmail.com";
-var emailid = SpreadsheetApp.getActive().getOwner().getEmail();
+var emailid = getProperty("emailid", SpreadsheetApp.getActive().getOwner().getEmail());
 
-//Site target of post
-//You need to have a google site created.  Create a page called rotasearch on that page and set a simple one column layout on that page.
-//var siteid = "https://sites.google.com/site/terrywbradyexamples"
-var siteid = SitesApp.getSites()[0].getUrl();
 
 //Key of the source spreadsheet, this can be pulled from the spreadsheet URL
-//var rotaid = "1TkEeO1M-dHDQ5Qoh6PHC5OFGQCJ85gRk9r-9npqDDoA";
-var rotaid = SpreadsheetApp.getActive().getId();
+//var rotaid = "1T_AnSoz893QY1IL9uH9L8mH220Wp6WE_Weaq3VkxOX4";
+var rotaid = getProperty("rotaid", SpreadsheetApp.getActive().getId());
 
-function init(load) {
-  //Create lock if caching data in memory (not applicable to current solution)
-  var lock = LockService.getPublicLock();
-  lock.waitLock(60000);
-  
-  loadRotaFromSpreadsheet();
-  
-  //release loc
-  lock.releaseLock();
+function init() {
+  return loadRotaFromSpreadsheet();
 }
 
+function getProperty(key, def) {
+  var s = prop.getProperty(key);
+  return (s == null) ? def : s;
+}
+ 
 //get last modified date for the spread sheet
 function getLastModified() {
-  var rotaFile = DocsList.getFileById(rotaid);
+  var rotaFile = DriveApp.getFileById(rotaid);
   if (rotaFile == null) return "";
   return getTimeStr(rotaFile.getLastUpdated());
 }
 
 // Determine if the spreadsheet has changed 
 function hasSpreadsheetChanged() {
-  if (rotamod == null) return true;
-  var last = getLastModified();
-  return (rotamod.mdate != last);
+  var rotamod = prop.getProperty("lastmod");
+  if (rotamod != null) {
+    var last = getLastModified();
+    if (rotamod == last){
+      return false;
+    }
+  }
+  prop.setProperty("lastmod", last);
+  return true;
 }
 
 //Build object representation of spreadsheet contents
 function loadRotaFromSpreadsheet() {
-  //lock no longer applicable
-  var lock = LockService.getPublicLock();
-  lock.waitLock(60000);
-  
   //initialize objects and arrays
+  var DATA = {
+    dates: {type: 'dates'},
+    roles: {type: 'roles'}
+  };
+
   //key values normalized as object properties
-  if (dates == null) dates = {type: 'dates'};
+  var dates = DATA.dates;
   dates.idates = {};
-  if (roles == null) roles = {type: 'roles'};
+  var roles = DATA.roles;
   roles.iroles = {};
   roles.oroles = [];
-  if (rows == null) rows = {type: 'rows'};
+  
+  var rows = {type: 'rows'};
   rows.row ={};
   rows.role={};
-  if (people == null) people = {type: 'people'};
+  
+  var people = {type: 'people'};
   people.ipeople ={};
-  if (rotamod == null) rotamod = {type: 'mod'};
-  rotamod.mdate = getLastModified();
   
   var batch = [];
   
@@ -126,7 +132,28 @@ function loadRotaFromSpreadsheet() {
     //create array of services for each date
     var num = dates.idates[d].service.length + 1;
     var datenum = d + "_" + num;
-    var service = new Object({type: 'service', date: d, service_time: data[1][c], num: num, datenum: datenum, name: data[1][c], role: {}});
+    var num = dates.idates[d].service.length + 1;
+    var datenum = d + "_" + num;
+    var serviceTime = data[1][c];
+    
+    Logger.log(serviceTime);
+    if (serviceTime instanceof Object) {
+      try {
+        serviceTime = new Date(serviceTime);
+        var hour = serviceTime.getHours();
+        var ap = (hour >= 12) ? "pm" :"am";
+        hour = (hour > 12) ? hour - 12 : (hour == 0) ? 12 : hour;
+        hour = (hour > 9) ? hour : "0" + hour;
+        var min = serviceTime.getMinutes();
+        min = (min > 9) ? min : "0" + min;
+        serviceTime = hour + ":" + min + ap;
+      } catch(e) {
+        Logger.log(e);
+      }
+      Logger.log(serviceTime);
+    }
+    
+    var service = new Object({type: 'service', date: d, service_time: serviceTime, num: num, datenum: datenum, name: serviceTime, role: {}});
     dates.idates[d].service.push(service);
     for(var r=2; r<data.length; r++) {
       if (rows.row[r] == null) continue;
@@ -149,5 +176,5 @@ function loadRotaFromSpreadsheet() {
       }  
     }
   }  
-  lock.releaseLock();
+  return DATA;
 }
