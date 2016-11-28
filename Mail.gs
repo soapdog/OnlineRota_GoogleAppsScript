@@ -34,7 +34,14 @@ function getDateTable(DATA, d, daterec) {
  
 }
 
-// email the rota to the designated recipient(s)
+// email the rota to the designated recipient(s), display UI confirmation
+function sendRotaWithUi() {
+  sendRotaAdd(emailid);
+  linkToGoogleSiteWithTitle("Updated Rota Mailed to "+addr);
+}
+
+
+// email the rota to the designated recipient(s), no UI confirmation so this is callable from a time-based trigger
 function sendRota() {
   sendRotaAdd(emailid);
 }
@@ -61,7 +68,6 @@ function sendRotaAdd(addr) {
      htmlBody: buf
     }
   );
-  linkToGoogleSiteWithTitle("Updated Rota Mailed to "+addr);
 }
 
 //Get the site id for publishing a rota to Google Sites
@@ -74,7 +80,18 @@ function getSiteid() {
 }  
 
 
-//publish the rota to a google sites page
+//publish the rota to a google sites page, add UI confirmation
+function publishRotaWithUi() {
+  if (publishRota()) {
+    SitesApp.getPageByUrl(page).setHtmlContent(buf);
+    linkToGoogleSiteWithTitle("Google Sites Publishing Page Updated");
+  } else {
+    noGoogleSite();
+  }
+}
+
+
+//publish the rota to a google sites page, this has no UI interaction and may be called from a time-based trigger
 function publishRota() {
   var page = getPublishPage();
   if (testPublishPage(page)) {
@@ -88,10 +105,9 @@ function publishRota() {
       var val = vals[i];
       buf += getDateTable(DATA, val, dates.idates[val]);
     }
-    SitesApp.getPageByUrl(page).setHtmlContent(buf);
-    linkToGoogleSiteWithTitle("Google Sites Publishing Page Updated");
+    return true;
   } else {
-    noGoogleSite();
+    return false;
   }
 }
 
@@ -156,18 +172,51 @@ function testPublishPage(page) {
  */
 function onOpen(e) {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  var entries = [{
-    name : "Mail Rota",
-    functionName : "sendRota"
-  },
-  {
-    name : "Publish Rota",
-    functionName : "publishRota"
-  },
-  {
-    name : "Open Publishing Page",
-    functionName : "linkToGoogleSite"
-  }];
+  var entries = [
+    {
+      name : "Mail Rota",
+      functionName : "sendRota"
+    },
+    {
+      name : "Publish Rota",
+      functionName : "publishRota"
+    },
+    {
+      name : "Open Publishing Page",
+      functionName : "linkToGoogleSite"
+    },
+    { 
+      name : "Count Assignments By Name",
+      functionName : "countAssignments"
+    }
+  ];
   spreadsheet.addMenu("Script Rota", entries);
 };
 
+/*
+ * Display a unique list of people assigned to a role and the count of assignments for each person
+ */
+function countAssignments() {
+  var DATA = init();
+  var people_arr = [];
+  for(pk in DATA.people.ipeople) {
+    var p = DATA.people.ipeople[pk];
+    p.count = 0;
+    for(dn in p.roles) {
+      p.count += p.roles[dn].length;
+    }
+    people_arr[people_arr.length] = p;
+  }
+  people_arr = people_arr.sort(function(a,b){
+    if (a.count == b.count) return 0;
+    if (a.count < b.count) return 1;
+    return -1;
+  });
+  var html = HtmlService.createHtmlOutput("<table><tr><th>Assignee</th><th>Num Assignments</th></tr>");
+  for(var i=0; i<people_arr.length; i++) {
+    var p = people_arr[i];
+    html.append("<tr><th>"+p.name+"</th><td>"+p.count+"</td></tr>");
+  }
+  html.append("</table>");
+  SpreadsheetApp.getUi().showModalDialog(html, "Current Assignments");
+}

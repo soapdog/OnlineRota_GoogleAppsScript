@@ -18,10 +18,10 @@
  *
  * 3. Google Apps Script Properties (embedded in the script)
  * ----------------------------------------------------------------
+ * siteid   REQUIRED. The URL to the Google Site to which the rota will be published.  
  * rotaid   The google apps object id of the spreadsheet to process.  If the script is embedded in a Google Sheet, that spreadsheet will be used.
  * emailid  The email recipient to use for sending out the published rota.  If not set, the spreadsheet owner will be used.
  * rotamod  Contains the last date that the rota was published to the website.  Updates will not be published if no recent changes exist.
- * siteid   The URL to the Google Site to which the rota will be published.  If not set, the first Google site owned by the user will be used.
  * pageId   The page name (within the google site) to which the rota will be published.  If not set, "rotasearch" will be used.
  */
 
@@ -70,12 +70,38 @@ function hasSpreadsheetChanged() {
   return true;
 }
 
-//Build object representation of spreadsheet contents
+/*
+ * Build object representation of spreadsheet contents
+ * This representation of the data can be searched/indexed by date, by role, or by assigned person 
+ *
+ * Returns
+ *
+ * DATA
+ *  .dates
+ *    .idates[date]
+ *      .service[] - array of services in column order from the spreadsheet
+ *        .date         - date of a specific service
+ *        .service_time - column label for a specific service
+ *        .num          - sequence number for a service on a date
+ *        .datenum      - unique key combining date and service time
+ *        .name         - service name (same as service time)
+ *        .role[role][] - array of people performing a role at a specific time
+ *        
+ *  .roles
+ *    .roles[role]      - name of a specific role
+ *    .oroles[]         - array of role keys retaining spreadsheet order
+ *  .people
+ *    .ipeople[person]  - person name normalized as an object key
+ *      .name           - full name of person performing a role
+ *      .roles[datenum] - known roles assigned to the person for a specific date/service
+ */
 function loadRotaFromSpreadsheet() {
   //initialize objects and arrays
+  //
   var DATA = {
-    dates: {type: 'dates'},
-    roles: {type: 'roles'}
+    dates:  {type: 'dates'},
+    roles:  {type: 'roles'},
+    people: {type: 'people'}
   };
 
   //key values normalized as object properties
@@ -89,7 +115,7 @@ function loadRotaFromSpreadsheet() {
   rows.row ={};
   rows.role={};
   
-  var people = {type: 'people'};
+  var people = DATA.people;
   people.ipeople ={};
   
   var batch = [];
