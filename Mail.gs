@@ -34,16 +34,37 @@ function getDateTable(DATA, d, daterec) {
  
 }
 
-// email the rota to the designated recipient(s), display UI confirmation
-function sendRotaWithUi() {
-  sendRotaAdd(emailid);
-  linkToGoogleSiteWithTitle("Updated Rota Mailed to "+addr);
+function getMyEmail() {
+  return Session.getActiveUser().getEmail();
 }
 
+function getRotaEmail() {
+  return getProperty("emailid", getMyEmail());
+}
+
+// email the rota to the designated recipient(s), display UI confirmation
+function sendRotaWithUi() {
+  sendRotaAdd(getRotaEmail());
+  sendRotaConf(getRotaEmail());
+}
+
+// email the rota to the designated recipient(s), display UI confirmation
+function sendRotaWithUiToMe() {
+  sendRotaAdd(getMyEmail());
+  sendRotaConf(getMyEmail());
+}
+
+function sendRotaConf(addr) {
+  if (testPublishPage(getPublishPage())){    
+    linkToGoogleSiteWithTitle("Updated Rota Mailed to "+addr);
+  } else {
+    SpreadsheetApp.getUi().alert("Updated Rota Mailed to "+addr);
+  }
+}
 
 // email the rota to the designated recipient(s), no UI confirmation so this is callable from a time-based trigger
 function sendRota() {
-  sendRotaAdd(emailid);
+  sendRotaAdd(getRotaEmail());
 }
 
 // email the rota to a specific address
@@ -75,7 +96,8 @@ function getSiteid() {
   //Site target of post
   //You need to have a google site created.  Create a page called rotasearch on that page and set a simple one column layout on that page.
   //var siteid = "https://sites.google.com/site/terrywbradyexamples"
-  var defsite = SitesApp.getSites().length > 0 ? SitesApp.getSites()[0].getUrl() : null;
+  //var defsite = SitesApp.getSites().length > 0 ? SitesApp.getSites()[0].getUrl() : null;
+  var defsite = null;
   return getProperty("siteid", defsite);
 }  
 
@@ -83,7 +105,6 @@ function getSiteid() {
 //publish the rota to a google sites page, add UI confirmation
 function publishRotaWithUi() {
   if (publishRota()) {
-    SitesApp.getPageByUrl(page).setHtmlContent(buf);
     linkToGoogleSiteWithTitle("Google Sites Publishing Page Updated");
   } else {
     noGoogleSite();
@@ -95,7 +116,9 @@ function publishRotaWithUi() {
 function publishRota() {
   var page = getPublishPage();
   if (testPublishPage(page)) {
-    if (!hasSpreadsheetChanged()) return;
+    if (!hasSpreadsheetChanged()) {
+      return false;
+    }
     var DATA = init();
     var dates = DATA.dates;
     var buf = "<h4>This page is re-created daily from the rota spreadsheet.</h4>";
@@ -105,6 +128,7 @@ function publishRota() {
       var val = vals[i];
       buf += getDateTable(DATA, val, dates.idates[val]);
     }
+    SitesApp.getPageByUrl(page).setHtmlContent(buf);
     return true;
   } else {
     return false;
@@ -129,7 +153,17 @@ function linkToGoogleSiteWithTitle(title) {
 
 //Present a warning dialog with that a sites publishing page cannot be found
 function noGoogleSite() {
-  SpreadsheetApp.getUi().alert("No Google Site set for publishing\n\t1)Set a script property with a URL to a Google Site for which you have write access \nOR\n\t2)Create a new Google Site under your user account");
+  var buf = "";
+  if (hasSpreadsheetChanged()) {
+    buf = "Please verify that the site page has been properly configured:\n\n" +
+            "siteid:     " + getSiteid() + "\n" +
+            "pageid:     " + getPageid() + "\n" +
+            "url:        " + getPublishPage() + "\n" +
+            "writeable?: " + testPublishPage(getPublishPage()) + "\n";
+  } else {
+    buf = "No changes were available to publish.  Last modification on " +getLastModified();
+  }
+  SpreadsheetApp.getUi().alert(buf);
 }
 
 //Get the default page name for the published rota
@@ -175,11 +209,15 @@ function onOpen(e) {
   var entries = [
     {
       name : "Mail Rota",
-      functionName : "sendRota"
+      functionName : "sendRotaWithUi"
+    },
+    {
+      name : "Mail Rota To Me",
+      functionName : "sendRotaWithUiToMe"
     },
     {
       name : "Publish Rota",
-      functionName : "publishRota"
+      functionName : "publishRotaWithUi"
     },
     {
       name : "Open Publishing Page",

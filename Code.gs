@@ -28,15 +28,6 @@
 //properties
 var prop = PropertiesService.getScriptProperties();
 
-
-/*
- * Variables that need to be modified for each run
- */
-// Email recipient for rota messages.  Ideally this is a group email for all rota participants.
-//var emailid = "yourtest____test@gmail.com";
-var emailid = getProperty("emailid", SpreadsheetApp.getActive().getOwner().getEmail());
-
-
 //Key of the source spreadsheet, this can be pulled from the spreadsheet URL
 //var rotaid = "1T_AnSoz893QY1IL9uH9L8mH220Wp6WE_Weaq3VkxOX4";
 var rotaid = getProperty("rotaid", SpreadsheetApp.getActive().getId());
